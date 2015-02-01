@@ -1,0 +1,75 @@
+1.[WTI] P0 pristupa 3 puta memoriji i ima hit rate 1/3, a P1 pristupa 1 put memoriji i ima hit rate 0. Ostali procesori ne ucestvuju.
+2.[WTI] Na osnovu 3. akcije kada P1 vrsi upis podatka A0 kojeg nema u kesu, a tom prilikom ne dovlaci ga u kes vec ga upisuje u memoriji.
+				U kesu procesora P1 A0 = 2, V = 1, a u memoriji A0 = 2.
+3.[WTI] Niko sem tog procesora ne moze da vrsi invalidaciju podatka pa ne bi trebalo da se memorija non-stop azurira.
+				Azuriranje bi se vrsilo samo pri zameni bloka.
+4.[WTI] Posle 3. nijedan. Posle 5. P0 ima V A0 = 2. Memorija je azurna.
+5.[WTI] Validnu vrednost nema niko. Azuriranje memorije uvodi problem i zagusenje na magistrali.
+				Poboljsanje bi se postiglo time da se azuriranje vrsi lokalno, samo u kesu.
+6.[WTI] Nisu potrebne dodatne akcije jer je memorija azurna, a blok A0 u P0 je bio validan pre zamene.
+
+7.[MSI] P0 cita A0 iz memorije u 1. koraku i dovlaci ga u kes u stanju S. U koraku 5. P0 pristupa memoriji,
+				da bi je azurirao jer je P1 zahtevao blok A0 koji je bio u stanju M u P0. P1 pristupa 2 puta memoriji u koraku 7,
+				jednom da bi vratio blok A0 i azurirao memoriju, a drugi put da bi dovukao blok A2. P1 pristupa memoriji u koraku 8
+				da bi azurirao blok A2 koji je u stanju M, jer procesor P2 hoce da upisuje u taj blok.
+8.[MSI] U koraku 1 kod WTI protokola A0 je u stanju V, a kod MSI protokola je u stanju S. U koraku 8 memorija
+				bi kod WTI protokola bila azurna dok je kod MSI neazurna, P2 je dobio A2 od kes kontrolera P1 koji je azurirao memoriju tom prilikom, 
+				a zatim je P2 upisao u A0 i time opet memorija postala neazurna. U koracima 3 i 4 upisi su lokalni za kes i nema izlaska na magistralu.
+9.[MSI] P1 vraca blok A0 u memoriju cime je azurira, a dovlaci blok A2 u koji upisuje i prevodi ga u stanje M i salje signal za invalidaciju ostalim procesorima.
+10.[MSI] Mana je sto se salje nepotrebna invalidacija iako je podatak samo u jednom kesu. Invalidacija nema efekta jer niko nema taj podatak.
+
+11.[MESI] Uocava se da se prilikom upisa u stanju Exclusive ne vrsi invalidacija vec se obavlja lokalno i samo se menja stanje u Modified.
+12.[MESI] Uocava se prednost u tome sto se podatak A0 dostavlja procesoru P1 iz kesa procesora P0 a ne iz memorije.
+					Signal shared odredjuje da li ce se podatak citati iz nekog od keseva ili iz memorije.
+13.[MESI] U stanju Shared. Prilikom zamene dovlaci se blok A2 i postavlja u stanje Exclusive, a blok A0 se ne vraca u memoriju.
+14.[MESI] Zato sto protokol ne obavestava prilikom zamene bloka ostale procesore o njihovim kopijama.
+					Procesor P2 misli da ima jos kopija u sistemu i zato se vrsi invalidacija bloka A0 prilikom upisa u njega.
+					Nadgradnja bi bila uvodjenjem jos jedne linije kojom bi se oznacilo da se prilikom zamene bloka podatak nalazi ili ne nalazi u drugim kesevima
+					pa bi se na osnovu toga moglo tacno odrediti da li je stanje u koje treba preci Shared ili Exclusive.
+15.[MESI] Podatak se cita iz kesa procesora P2 koji je zaduzen da azurira memoriju jer je u tom trenutku blok A0 u stanju Modified.
+					Nakon ovoga procesor P0 upisuje u blok A0 cime invalidira blok u kesu procesora P2, a memorija je opet neazurna jer je u P0 blok A0 u stanju Modified.
+
+16.[MOESI] Podatak se dostavlja iz kesa procesora P0. U koraku 3 se procesoru P2 podatak dostavlja iz memorije.
+					 To je implementirano na osnovu protokola, tako sto se podatak dostavlja iz nekog drugog kesa samo ako se u tom kesu nalazi u stanju Exclusive,
+					 a ako ga nema u drugim kesevima, ili ako su u stanju Shared tada se dostavlja iz memorije.
+17.[MOESI] U procesoru P1 u stanju Shared, a u procesoru P2 u stanju Owned. Memorija nije azurna. 
+					 P3 bi podatak dobio od procesora P2 koji jedini ima azurnu kopiju A0i zato se nalazi u stanju Owned.
+18.[MOESI] Prilikom zamene bloka P2 je odgovoran za azuriranje memorije pa ce se zato blok A0 vratiti u memoriju, 
+					 zatim ce kes kontroler procesora P1 prepoznati da ima blok A2 u stanju Exclusive i dostavice ga procesoru P2 i onda obe kopije prelaze u stanje Shared.
+
+
+
+Azurirajuci protokoli
+
+19.[DRAGON] Procesor P0 pristupa 2 puta memoriji, hit rate mu je 0.5, procesor P1 pristupa memoriji 2 puta, hit rate mu je 1/3, 
+						procesor P2 pristupa memoriji 1, hit rate mu je 0, a procesor P3 nije aktivan u ovom primeru.
+20.[DRAGON] Blok A0 u procesoru P0 prelazi iz stanja E u stanje Sc. Podatak se procesorima P1 i P2 dostavlja iz memorije i postavlja se u stanje Sc.
+21.[DRAGON] Blok A0 u procesoru P0 prelazi u stanje Sm, a u procesorima P1 i P2 blok A0 ostaje u stanju Sc, 
+						s' tim sto se azurira vrednost i sada je vrednost bloka A0 azurna u svim procesorima i ima vrednost 1. Memorija se ne azurira. 
+						Sustinska razlika je u tome sto se vrednosti bloka koji se nalazi u razlicitim procesorima azurira prilikom upisa.
+22.[DRAGON] Posle koraka 5 blok A2 je u stanju E, a posle koraka 6 blok je u stanju M. Zato sto nijedan drugi procesor nema ovaj blok u svom kesu. 
+						Ovo se odredjuje na osnovu shared linije na magistrali. Zamena se obavlja bez azuriranja memorije jer je blok A0 u stanju Sc, 
+						a blok A2 se dovlaci na njegovo mesto i postavlja u stanje E.
+23.[DRAGON] Procesor P0 cita blok A2, on je u procesoru P1 u stanju M i procesor P1 dostavlja blok procesoru P1. Blok A2 ce u procesoru biti u stanju Sc, 
+						a u procesoru P1 u stanju Sm. Memorija se ne azurira, a prilikom zamene bloka A0 u procesoru P0 azurirala se memorija, 
+						jer je blok A0 bio u stanju Sm u procesoru P0.
+24.[DRAGON] Procesor P0 upisuje u blok A2, on prelazi u stanje Sm, a posto je procesor P1 ima isti taj blok u kesu on se azurira i u stanju je Sc.
+						Memorija se ne azurira.
+25.[DRAGON] Procesor P2 upisuje u blok A2, mora da vrsi zamenu bloka posto ga nema u kesu i tom prilikom nema potrebe da se
+						A0 vraca u memoriju jer je u stanju Sc. Proceor P0 dostavlja blok A2 procesoru P2 jer je kod njega u stanju Sm, 
+						procesor P2 upisuje u blok i azurira blokove u procesorima P0 i P1 koji imaju blok A2 u svojim kesevima i u njima ce biti u stanju Sc, 
+						dok je u P2 u stanju Sm. Memorija je neazurna. Ne pristupa se memoriji.
+
+26.[FIREFLY] Blok A0 se u nalazi u stanju sd koje oznacava eklskluzivnost, memorija je azurna. Ekvivalentno stanje stanju sd u Dragon protokolu je E.
+27.[FIREFLY] Blok A0 se u kesevima procesora P0 i P1 nalaziu stanju Sd, memorija je azurna. Ekvivalentno stajne Sd stanju u Dragon protoklu je Sc. 
+						 Procesor P1 dobija podatak od procesora P0.
+28.[FIREFLY] Blok A0 se u kesevima procesora P0, P1 i P2 nalazi u stanju Sd. Procesor P2 dobija podatak od nekog od procesora P0 ili P1, 
+						 posto oba izbacuju podatak na magistralu.
+29.[FIREFLY] Blok A0 se u kesevima procesora P0, P1 i P2 nalazi u stanju Sd. Memorija je azurirana. Ovo stanje je objedinjeno od stanja 
+						 Sc i Sm u Dragon protokolu, a moguce je jer je u Firefly protokolu Sm stanje suvisno jer se prilikom azuriranja deljenih kopija kesa, 
+						azurira i memorija.
+30.[FIREFLY] Nisu potrebne posebne akcije pri zameni jer je memorija azurna pa je potrebno samo dovuci blok A2 u kes. Posle koraka 6 blok A2 prelazi u stanje sD. 
+						 Ovo stanje oznacava da nema deljenih kopija ali da memorija nije azurna. Kod Dragon protokola ovo bi bilo stanje M.
+31.[FIREFLY] U koraku 7 procesor P0 cita blok A2 koji je modifikovan od strane procesora P1 i on ce taj podatak dostaviti procesoru P0 
+						 i tom prilikom azurirati memoriju. Prilikom zamene bloka A0 u kesu procesora P0 ne desava se nista jer je on u stanju Sd pa je azuran u memoriji. 
+						 Memorija je azurna za A0 i A2. U procesorima P0 i P2 blok A2 je u stanju Sd.
